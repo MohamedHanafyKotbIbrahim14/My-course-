@@ -129,11 +129,8 @@ if not csv_files or len(csv_files) < 2:
 
 st.success(f"✅ Loaded {len(csv_files)} CSV files from Google Drive!")
 
-# Show available files
-st.subheader("📂 Available Files")
+# Get file names for selection
 file_names = [name for name, _ in csv_files]
-for i, name in enumerate(file_names, 1):
-    st.write(f"{i}. **{name}**")
 
 st.markdown("---")
 
