@@ -2,26 +2,57 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import gdown
+import os
+import tempfile
+import shutil
 
 st.set_page_config(page_title="Course Analysis Tool", layout="wide")
 
 st.title("📊 Advanced Course Analysis & Comparison Tool")
 
-# Sidebar
-st.sidebar.header("📁 Upload CSV Files")
+# Google Drive configuration
+GOOGLE_DRIVE_FOLDER = st.secrets.get("GOOGLE_DRIVE_FOLDER", "")
 
-st.sidebar.markdown("""
-**Instructions:**
-1. Upload 2 CSV files using the file uploaders below
-2. Select which assessment columns to compare (after upload)
-3. Choose analysis filter (ALL vs BOTH)
-""")
-
-# File uploaders
-uploaded_file1 = st.sidebar.file_uploader("Upload File 1 (CSV)", type=['csv'], key="uploader1")
-uploaded_file2 = st.sidebar.file_uploader("Upload File 2 (CSV)", type=['csv'], key="uploader2")
-
-st.sidebar.markdown("---")
+# Cache the data loading to avoid repeated downloads
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def load_csv_files_from_drive(folder_url):
+    """
+    Load CSV files from Google Drive folder
+    Returns list of (filename, dataframe) tuples
+    """
+    if not folder_url:
+        return []
+    
+    try:
+        # Extract folder ID from URL
+        folder_id = folder_url.split('/folders/')[1].split('?')[0]
+        
+        # Create temporary directory
+        temp_dir = tempfile.mkdtemp()
+        
+        # Download folder contents
+        gdown.download_folder(id=folder_id, output=temp_dir, quiet=False, use_cookies=False)
+        
+        # Process each CSV file
+        csv_files = []
+        for filename in os.listdir(temp_dir):
+            if filename.endswith('.csv') or filename.endswith('.CSV'):
+                file_path = os.path.join(temp_dir, filename)
+                try:
+                    df = pd.read_csv(file_path)
+                    csv_files.append((filename, df))
+                except Exception as e:
+                    st.warning(f"Could not read {filename}: {str(e)}")
+        
+        # Clean up temp directory
+        shutil.rmtree(temp_dir)
+        
+        return csv_files
+        
+    except Exception as e:
+        st.error(f"Error loading data from Google Drive: {str(e)}")
+        return []
 
 def process_dataframe(df):
     """Process and clean the dataframe"""
@@ -34,8 +65,8 @@ def process_dataframe(df):
     
     # COLUMN D (index 3): ALWAYS contains Final Mark + Grade
     final_col = df.iloc[:, 3]  # Column D
-    df['Final_Mark'] = final_col.astype(str).str.extract('(\d+)').astype(float)
-    df['Grade'] = final_col.astype(str).str.extract('([A-Z]{2,3})')[0]
+    df['Final_Mark'] = final_col.astype(str).str.extract(r'(\d+)').astype(float)
+    df['Grade'] = final_col.astype(str).str.extract(r'([A-Z]{2,3})')[0]
     
     # Clean Student ID (should be in first columns)
     df['Student ID'] = df.iloc[:, 0].astype(str).str.strip()
@@ -73,94 +104,151 @@ def get_assessment_columns(df):
     
     return assessment_cols
 
-# Main content
-if not uploaded_file1 or not uploaded_file2:
-    st.info("👈 **Please upload 2 CSV files** in the sidebar to begin analysis")
-    st.markdown("""
-    ### How to use this tool:
-    1. Click on **"Browse files"** in the sidebar
-    2. Select your first CSV file
-    3. Select your second CSV file
-    4. Choose metrics to compare
-    5. View comprehensive analysis and visualizations
+# Load files from Google Drive
+st.header("📁 Load Files from Google Drive")
+
+if not GOOGLE_DRIVE_FOLDER:
+    st.error("⚠️ Google Drive folder not configured!")
+    st.info("""
+    **To enable automatic data loading:**
+    1. Add your Google Drive folder link to Streamlit Secrets
+    2. Key: `GOOGLE_DRIVE_FOLDER`
+    3. Value: Your folder sharing link
+    
+    For now, you can test locally by setting the folder link in the code.
     """)
     st.stop()
 
-# Get file names
-file1 = uploaded_file1.name
-file2 = uploaded_file2.name
+with st.spinner("Loading CSV files from Google Drive..."):
+    csv_files = load_csv_files_from_drive(GOOGLE_DRIVE_FOLDER)
 
-st.sidebar.success(f"✅ Both files uploaded successfully!")
+if not csv_files or len(csv_files) < 2:
+    st.warning(f"⚠️ Found {len(csv_files)} CSV file(s) in Google Drive. Need at least 2 files for comparison.")
+    st.info("Make sure you have at least 2 CSV files uploaded to the shared folder.")
+    st.stop()
+
+st.success(f"✅ Loaded {len(csv_files)} CSV files from Google Drive!")
+
+# Show available files
+st.subheader("📂 Available Files")
+file_names = [name for name, _ in csv_files]
+for i, name in enumerate(file_names, 1):
+    st.write(f"{i}. **{name}**")
+
+st.markdown("---")
+
+# File selection
+st.subheader("🔍 Select Files to Compare")
+
+col_select1, col_select2 = st.columns(2)
+
+with col_select1:
+    selected_file1_name = st.selectbox(
+        "Select File 1:",
+        file_names,
+        key="file1_select",
+        help="Choose the first file for comparison"
+    )
+
+with col_select2:
+    selected_file2_name = st.selectbox(
+        "Select File 2:",
+        file_names,
+        key="file2_select",
+        help="Choose the second file for comparison"
+    )
+
+if selected_file1_name == selected_file2_name:
+    st.warning("⚠️ Please select two DIFFERENT files to compare!")
+    st.stop()
+
+st.success(f"✅ Comparing: **{selected_file1_name}** vs **{selected_file2_name}**")
+
+# Get the selected dataframes
+df1_orig = None
+df2_orig = None
+
+for name, df in csv_files:
+    if name == selected_file1_name:
+        df1_orig = df.copy()
+    if name == selected_file2_name:
+        df2_orig = df.copy()
+
+if df1_orig is None or df2_orig is None:
+    st.error("Error loading selected files!")
+    st.stop()
+
+# Process dataframes
+df1_orig = process_dataframe(df1_orig)
+df2_orig = process_dataframe(df2_orig)
+
+file1 = selected_file1_name
+file2 = selected_file2_name
+
+st.markdown("---")
 
 try:
-    # Read and process both files
-    df1_orig = pd.read_csv(uploaded_file1)
-    df2_orig = pd.read_csv(uploaded_file2)
-    
-    df1_orig = process_dataframe(df1_orig)
-    df2_orig = process_dataframe(df2_orig)
-    
-    # Get available assessment columns (from Column E onwards)
+    # Get available assessment columns
     assessment_cols_file1 = get_assessment_columns(df1_orig)
     assessment_cols_file2 = get_assessment_columns(df2_orig)
     
-    # Show column selection in sidebar
-    st.sidebar.success(f"✅ Both files uploaded successfully!")
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📊 Select Columns to Compare")
+    # Column selection
+    st.subheader("📊 Select Columns to Compare")
     
-    st.sidebar.markdown(f"**File 1:** {file1}")
-    if len(assessment_cols_file1) > 0:
-        selected_col1 = st.sidebar.selectbox(
-            "Select column:",
-            assessment_cols_file1,
-            key="col1",
-            help="Column D (final mark/grade) + all detected assessment columns"
-        )
-    else:
-        st.sidebar.error("No assessment columns found in File 1!")
-        st.stop()
+    col_picker1, col_picker2 = st.columns(2)
     
-    st.sidebar.markdown(f"**File 2:** {file2}")
-    if len(assessment_cols_file2) > 0:
-        selected_col2 = st.sidebar.selectbox(
-            "Select column:",
-            assessment_cols_file2,
-            key="col2",
-            help="Column D (final mark/grade) + all detected assessment columns"
-        )
-    else:
-        st.sidebar.error("No assessment columns found in File 2!")
-        st.stop()
+    with col_picker1:
+        st.markdown(f"**File 1:** {file1}")
+        if len(assessment_cols_file1) > 0:
+            selected_col1 = st.selectbox(
+                "Select column:",
+                assessment_cols_file1,
+                key="col1",
+                help="Column D (final mark/grade) + all detected assessment columns"
+            )
+        else:
+            st.error("No assessment columns found in File 1!")
+            st.stop()
     
-    st.sidebar.markdown("---")
-    st.sidebar.info(f"""
+    with col_picker2:
+        st.markdown(f"**File 2:** {file2}")
+        if len(assessment_cols_file2) > 0:
+            selected_col2 = st.selectbox(
+                "Select column:",
+                assessment_cols_file2,
+                key="col2",
+                help="Column D (final mark/grade) + all detected assessment columns"
+            )
+        else:
+            st.error("No assessment columns found in File 2!")
+            st.stop()
+    
+    st.info(f"""
     **Comparison Setup:**
     - X-axis: {selected_col1} (File 1)
     - Y-axis: {selected_col2} (File 2)
     """)
+    
+    st.markdown("---")
     
     # Get Column D names for both files
     col_d_name_file1 = df1_orig.columns[3]
     col_d_name_file2 = df2_orig.columns[3]
     
     # Map selected columns to actual column names
-    # If Column D is selected, use the 'Final_Mark' column we created
     if selected_col1 == col_d_name_file1:
         col1_name = 'Final_Mark'
     else:
         col1_name = selected_col1
-        # Convert to numeric if it's an assessment column
         df1_orig[selected_col1] = pd.to_numeric(df1_orig[selected_col1], errors='coerce')
     
     if selected_col2 == col_d_name_file2:
         col2_name = 'Final_Mark'
     else:
         col2_name = selected_col2
-        # Convert to numeric if it's an assessment column
         df2_orig[selected_col2] = pd.to_numeric(df2_orig[selected_col2], errors='coerce')
     
-    # Store display names for labels (use the actual column names)
+    # Store display names for labels
     display_col1 = selected_col1
     display_col2 = selected_col2
     
@@ -211,10 +299,9 @@ try:
     axes[0, 1].legend()
     axes[0, 1].grid(True, alpha=0.3)
     
-    # Box Plot Comparison - merge bottom two plots into one
-    # Remove axes[1,1] and expand axes[1,0] to span both columns
+    # Box Plot Comparison
     fig_dist.delaxes(axes[1, 1])
-    axes[1, 0] = plt.subplot(2, 1, 2)  # Make bottom plot span full width
+    axes[1, 0] = plt.subplot(2, 1, 2)
     
     box_data = [data1_full, data1_common, data2_full, data2_common]
     box_labels = [f'File 1\nAll\n(n={len(data1_full)})', 
@@ -236,7 +323,7 @@ try:
     
     st.markdown("---")
     
-    # --- FILTER SELECTION (Right after box plot) ---
+    # --- FILTER SELECTION ---
     st.subheader("🔍 Analysis Filter")
     st.markdown("**⚠️ This affects ALL analysis below:**")
     filter_option = st.radio(
@@ -300,7 +387,7 @@ try:
         })
         st.dataframe(stats_df1_m1, use_container_width=True, hide_index=True)
         
-        # Grade distribution (always available since Column D is Final Mark)
+        # Grade distribution
         st.markdown("**📊 Grade Distribution (Final Mark)**")
         dist1 = get_grade_distribution(df1)
         grade_df1 = pd.DataFrame([
@@ -331,7 +418,7 @@ try:
         })
         st.dataframe(stats_df2_m2, use_container_width=True, hide_index=True)
         
-        # Grade distribution (always available since Column D is Final Mark)
+        # Grade distribution
         st.markdown("**📊 Grade Distribution (Final Mark)**")
         dist2 = get_grade_distribution(df2)
         grade_df2 = pd.DataFrame([
@@ -378,13 +465,12 @@ try:
         plot_df2 = df2[['Student ID', col2_name]].copy()
         plot_df2.columns = ['Student ID', 'Metric2']
         
-        plot_df = plot_df1.merge(plot_df2, on='Student ID', how='inner')  # Use inner to get only students in both
-        plot_df = plot_df.dropna()  # Remove any rows with NaN values
+        plot_df = plot_df1.merge(plot_df2, on='Student ID', how='inner')
+        plot_df = plot_df.dropna()
         
         # Create plot
         fig, ax = plt.subplots(figsize=(12, 8))
         
-        # All plotted students are in both files (mathematically required for scatter plot)
         if len(plot_df) > 0:
             ax.scatter(plot_df['Metric1'], plot_df['Metric2'], 
                       c='red', alpha=0.7, s=100, label=f'Students in BOTH files (n={len(plot_df)})')
