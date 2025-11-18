@@ -18,44 +18,182 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
-st.markdown("""
+# Initialize default font settings if not in session state
+if 'font_size' not in st.session_state:
+    st.session_state.font_size = 16
+if 'header_size' not in st.session_state:
+    st.session_state.header_size = 24
+if 'make_bold' not in st.session_state:
+    st.session_state.make_bold = True
+if 'plot_size_multiplier' not in st.session_state:
+    st.session_state.plot_size_multiplier = 1.2
+
+# Custom CSS for better styling with dynamic font sizes
+def get_dynamic_css(font_size, header_size, make_bold):
+    font_weight = "bold" if make_bold else "normal"
+    return f"""
 <style>
-    .main-header {
-        font-size: 3rem;
+    /* Dynamic font settings */
+    .stMarkdown, .stText, p, span, label {{
+        font-size: {font_size}px !important;
+        font-weight: {font_weight} !important;
+    }}
+    
+    h1 {{
+        font-size: {header_size + 8}px !important;
+        font-weight: bold !important;
+    }}
+    
+    h2 {{
+        font-size: {header_size + 4}px !important;
+        font-weight: bold !important;
+    }}
+    
+    h3 {{
+        font-size: {header_size}px !important;
+        font-weight: bold !important;
+    }}
+    
+    h4 {{
+        font-size: {header_size - 2}px !important;
+        font-weight: bold !important;
+    }}
+    
+    /* Dataframe text */
+    .dataframe {{
+        font-size: {font_size}px !important;
+    }}
+    
+    .main-header {{
+        font-size: {header_size + 12}px !important;
         font-weight: bold;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
         padding: 1rem 0;
-    }
-    .sub-header {
+    }}
+    
+    .sub-header {{
         text-align: center;
         color: #666;
-        font-size: 1.2rem;
+        font-size: {font_size + 2}px !important;
         margin-bottom: 2rem;
-    }
-    .metric-card {
+        font-weight: {font_weight} !important;
+    }}
+    
+    /* Special styling for Analysis Scope radio buttons */
+    .analysis-scope-container {{
+        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        animation: pulse 2s ease-in-out infinite;
+    }}
+    
+    @keyframes pulse {{
+        0% {{
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }}
+        50% {{
+            box-shadow: 0 8px 25px rgba(255,107,107,0.4);
+        }}
+        100% {{
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }}
+    }}
+    
+    .analysis-scope-title {{
+        font-size: {header_size}px !important;
+        font-weight: bold !important;
+        color: #2d3436 !important;
+        text-align: center;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }}
+    
+    /* Radio button styling */
+    .stRadio > div {{
+        font-size: {font_size + 2}px !important;
+        font-weight: bold !important;
+    }}
+    
+    .stRadio > div[role="radiogroup"] > label {{
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 12px 20px !important;
+        border-radius: 10px;
+        margin: 5px !important;
+        transition: all 0.3s ease;
+        font-size: {font_size + 2}px !important;
+        font-weight: bold !important;
+    }}
+    
+    .stRadio > div[role="radiogroup"] > label:hover {{
+        background-color: #667eea;
+        color: white;
+        transform: scale(1.05);
+    }}
+    
+    /* Metric styling */
+    .metric-card {{
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1.5rem;
         border-radius: 10px;
         color: white;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-size: 1.2rem;
-    }
-    .highlight-box {
+        font-size: {font_size}px !important;
+        font-weight: {font_weight} !important;
+    }}
+    
+    /* Tab labels */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
+        font-size: {font_size + 2}px !important;
+        font-weight: bold !important;
+    }}
+    
+    /* Buttons */
+    .stButton > button {{
+        font-size: {font_size}px !important;
+        font-weight: bold !important;
+        padding: 10px 20px;
+    }}
+    
+    /* Selectbox and other inputs */
+    .stSelectbox label, .stTextInput label, .stNumberInput label {{
+        font-size: {font_size}px !important;
+        font-weight: {font_weight} !important;
+    }}
+    
+    .stSelectbox > div > div {{
+        font-size: {font_size}px !important;
+    }}
+    
+    /* Info boxes */
+    .stAlert > div {{
+        font-size: {font_size}px !important;
+        font-weight: {font_weight} !important;
+    }}
+    
+    /* Highlight box */
+    .highlight-box {{
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 10px;
         border-left: 4px solid #667eea;
         margin: 1rem 0;
-    }
+    }}
 </style>
-""", unsafe_allow_html=True)
+"""
+
+# Apply dynamic CSS with current settings
+if 'font_size' in st.session_state:
+    st.markdown(get_dynamic_css(
+        st.session_state.font_size,
+        st.session_state.header_size,
+        st.session_state.make_bold
+    ), unsafe_allow_html=True)
 
 # Header
 st.markdown('<h1 class="main-header">🎓 Course Analysis Tool Pro</h1>', unsafe_allow_html=True)
@@ -91,6 +229,44 @@ with st.sidebar:
             st.markdown(f"{i}. 📄 **{file.name}**")
             file_size = file.size / 1024  # Convert to KB
             st.caption(f"   Size: {file_size:.2f} KB")
+    
+    st.markdown("---")
+    
+    # Font and Display Settings
+    st.markdown("## 🔤 Display Settings")
+    
+    st.session_state.font_size = st.slider(
+        "📏 Base Font Size",
+        min_value=12,
+        max_value=24,
+        value=st.session_state.font_size,
+        step=1,
+        help="Adjust the base font size for all text"
+    )
+    
+    st.session_state.header_size = st.slider(
+        "📐 Header Font Size",
+        min_value=18,
+        max_value=36,
+        value=st.session_state.header_size,
+        step=2,
+        help="Adjust the header font size"
+    )
+    
+    st.session_state.make_bold = st.checkbox(
+        "🔤 **Bold Text**",
+        value=st.session_state.make_bold,
+        help="Make all text bold for better visibility"
+    )
+    
+    st.session_state.plot_size_multiplier = st.slider(
+        "📊 Plot Size Multiplier",
+        min_value=0.8,
+        max_value=2.0,
+        value=st.session_state.plot_size_multiplier,
+        step=0.1,
+        help="Adjust the size of all plots and charts"
+    )
     
     st.markdown("---")
     
@@ -225,7 +401,8 @@ def create_grade_pie_chart(distribution, title, use_plotly=True, colors=None):
         fig.update_traces(textposition='inside', textinfo='percent+label')
         return fig
     else:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+        fig, ax = plt.subplots(figsize=(8 * plot_mult, 6 * plot_mult))
         ax.pie(percentages, labels=grades, colors=colors, autopct='%1.1f%%', startangle=90)
         ax.set_title(title)
         return fig
@@ -362,7 +539,7 @@ else:
                         row=1, col=idx+1
                     )
             
-            fig.update_layout(height=400, showlegend=False)
+            fig.update_layout(height=int(400 * st.session_state.get('plot_size_multiplier', 1.2)), showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
         else:
             cols = st.columns(len(dataframes))
@@ -463,14 +640,34 @@ else:
                     
                     # Filter option
                     st.markdown("---")
-                    filter_option = st.radio(
-                        "🔍 Analysis Scope",
-                        ["🌍 ALL Students", "🎯 ONLY Common Students"],
-                        horizontal=True,
-                        key="filter_radio"
-                    )
                     
-                    show_common_only = (filter_option == "🎯 ONLY Common Students")
+                    # Create prominent Analysis Scope section
+                    st.markdown("""
+                    <div class="analysis-scope-container">
+                        <h3 class="analysis-scope-title">⚡ IMPORTANT: Select Analysis Scope ⚡</h3>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Add emphasis box
+                    with st.container():
+                        col1, col2, col3 = st.columns([1, 3, 1])
+                        with col2:
+                            st.warning("⚠️ **This selection affects ALL analysis below!** Choose carefully:")
+                            filter_option = st.radio(
+                                "",
+                                ["🌍 **ALL Students** - Analyze everyone in each file", 
+                                 "🎯 **ONLY Common Students** - Analyze students in BOTH files"],
+                                horizontal=False,
+                                key="filter_radio"
+                            )
+                    
+                    # Extract the actual option value
+                    if "ALL Students" in filter_option:
+                        show_common_only = False
+                        st.success("✅ Analyzing **ALL STUDENTS** from each file independently")
+                    else:
+                        show_common_only = True
+                        st.error("🎯 Analyzing **ONLY STUDENTS** present in BOTH files")
                     
                     # Apply filtering based on selection
                     if show_common_only:
@@ -549,9 +746,13 @@ else:
                                     )
                                 )
                                 
+                                # Apply dynamic height
+                                fig.update_layout(height=int(500 * st.session_state.plot_size_multiplier))
+                                
                                 st.plotly_chart(fig, use_container_width=True)
                             else:
-                                fig, ax = plt.subplots(figsize=(10, 6))
+                                plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+                                fig, ax = plt.subplots(figsize=(10 * plot_mult, 6 * plot_mult))
                                 ax.scatter(plot_df['Metric1'], plot_df['Metric2'], 
                                           c=theme_colors['primary'], alpha=0.6, s=50)
                                 
@@ -638,10 +839,11 @@ else:
                                     )
                                     fig.add_vline(x=data1.mean(), line_dash="dash", line_color="red",
                                                  annotation_text=f"Mean: {data1.mean():.1f}")
-                                    fig.update_layout(height=350)
+                                    fig.update_layout(height=int(350 * st.session_state.plot_size_multiplier))
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
-                                    fig, ax = plt.subplots(figsize=(8, 5))
+                                    plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+                                    fig, ax = plt.subplots(figsize=(8 * plot_mult, 5 * plot_mult))
                                     ax.hist(data1, bins=20, color=theme_colors['histogram'], alpha=0.7, edgecolor='black')
                                     ax.axvline(data1.mean(), color='red', linestyle='--', 
                                              label=f'Mean: {data1.mean():.1f}')
