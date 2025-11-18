@@ -490,14 +490,44 @@ else:
                     
                     show_common_only = (filter_option == "🎯 ONLY Common Students")
                     
-                    if show_common_only and len(common_ids) > 0:
-                        # Filter for common students
+                    # Apply filtering based on selection
+                    if show_common_only:
+                        # Filter for common students only
                         df1_filtered = df1[df1['Student ID'].isin(common_ids)]
                         df2_filtered = df2[df2['Student ID'].isin(common_ids)]
-                        
-                        # Scatter plot
+                        st.info(f"🎯 Analyzing **{len(common_ids)}** common students")
+                    else:
+                        # Use all students
+                        df1_filtered = df1.copy()
+                        df2_filtered = df2.copy()
+                        st.info(f"🌍 Analyzing ALL students - File 1: **{len(df1)}** | File 2: **{len(df2)}**")
+                    
+                    # Statistics section (works for both ALL and COMMON)
+                    st.markdown("### 📊 Statistical Comparison")
+                    
+                    stat_col1, stat_col2 = st.columns(2)
+                    
+                    with stat_col1:
+                        st.markdown(f"#### {name1} - {selected_col1}")
+                        data1 = df1_filtered[col1_data].dropna()
+                        if len(data1) > 0:
+                            st.metric("Mean", f"{data1.mean():.1f}")
+                            st.metric("Std Dev", f"{data1.std():.1f}")
+                            st.metric("Median", f"{data1.median():.1f}")
+                    
+                    with stat_col2:
+                        st.markdown(f"#### {name2} - {selected_col2}")
+                        data2 = df2_filtered[col2_data].dropna()
+                        if len(data2) > 0:
+                            st.metric("Mean", f"{data2.mean():.1f}")
+                            st.metric("Std Dev", f"{data2.std():.1f}")
+                            st.metric("Median", f"{data2.median():.1f}")
+                    
+                    # Scatter plot - ONLY for common students
+                    if show_common_only and len(common_ids) > 0:
                         st.markdown("### 📈 Correlation Analysis")
                         
+                        # Prepare data for scatter plot
                         plot_df1 = df1_filtered[['Student ID', col1_data]].copy()
                         plot_df1.columns = ['Student ID', 'Metric1']
                         
@@ -508,7 +538,10 @@ else:
                         plot_df = plot_df.dropna()
                         
                         if len(plot_df) > 0:
+                            use_plotly = (chart_type == "Interactive (Plotly)")
+                            
                             if use_plotly:
+                                # Create scatter plot without trendline (to avoid statsmodels dependency)
                                 fig = px.scatter(
                                     plot_df, 
                                     x='Metric1', 
@@ -517,7 +550,6 @@ else:
                                     title=f'{selected_col1} vs {selected_col2}',
                                     labels={'Metric1': f'{selected_col1} ({name1})', 
                                            'Metric2': f'{selected_col2} ({name2})'},
-                                    trendline="ols",
                                     color_discrete_sequence=['#667eea']
                                 )
                                 
@@ -558,47 +590,110 @@ else:
                             if len(plot_df) > 1:
                                 correlation = plot_df['Metric1'].corr(plot_df['Metric2'])
                                 st.info(f"📊 Correlation Coefficient: **{correlation:.3f}**")
+                            
+                            # Detailed comparison table
+                            st.markdown("### 📋 Detailed Comparison Table")
+                            
+                            comparison_df = plot_df.copy()
+                            comparison_df['Difference'] = comparison_df['Metric2'] - comparison_df['Metric1']
+                            comparison_df['% Change'] = (comparison_df['Difference'] / comparison_df['Metric1'] * 100).round(1)
+                            comparison_df = comparison_df.sort_values('Difference', ascending=False)
+                            
+                            # Add performance indicators
+                            comparison_df['Performance'] = comparison_df['Difference'].apply(
+                                lambda x: '🟢 Better' if x > 5 else ('🔴 Worse' if x < -5 else '🟡 Similar')
+                            )
+                            
+                            # Rename columns for display
+                            comparison_df.columns = [
+                                'Student ID',
+                                f'{selected_col1} ({name1})',
+                                f'{selected_col2} ({name2})',
+                                'Difference',
+                                '% Change',
+                                'Performance'
+                            ]
+                            
+                            st.dataframe(
+                                comparison_df.style.background_gradient(subset=['Difference', '% Change']),
+                                use_container_width=True,
+                                height=400
+                            )
+                            
+                            # Summary statistics
+                            st.markdown("### 📊 Performance Summary")
+                            
+                            stat_cols = st.columns(3)
+                            improved = (comparison_df['Difference'] > 5).sum()
+                            declined = (comparison_df['Difference'] < -5).sum()
+                            stable = ((comparison_df['Difference'] >= -5) & (comparison_df['Difference'] <= 5)).sum()
+                            
+                            stat_cols[0].metric("📈 Improved", improved, f"{improved/len(comparison_df)*100:.1f}%")
+                            stat_cols[1].metric("📉 Declined", declined, f"{declined/len(comparison_df)*100:.1f}%")
+                            stat_cols[2].metric("➡️ Stable", stable, f"{stable/len(comparison_df)*100:.1f}%")
+                        else:
+                            st.warning("No data available for scatter plot with the selected columns")
+                    
+                    # Distribution plots for both ALL and COMMON students
+                    elif not show_common_only:
+                        st.markdown("### 📊 Distribution Comparison")
+                        st.info("Scatter plots are only available for common students. Showing distribution analysis instead.")
                         
-                        # Detailed comparison table
-                        st.markdown("### 📋 Detailed Comparison Table")
+                        use_plotly = (chart_type == "Interactive (Plotly)")
                         
-                        comparison_df = plot_df.copy()
-                        comparison_df['Difference'] = comparison_df['Metric2'] - comparison_df['Metric1']
-                        comparison_df['% Change'] = (comparison_df['Difference'] / comparison_df['Metric1'] * 100).round(1)
-                        comparison_df = comparison_df.sort_values('Difference', ascending=False)
+                        col1, col2 = st.columns(2)
                         
-                        # Add performance indicators
-                        comparison_df['Performance'] = comparison_df['Difference'].apply(
-                            lambda x: '🟢 Better' if x > 5 else ('🔴 Worse' if x < -5 else '🟡 Similar')
-                        )
+                        with col1:
+                            st.markdown(f"#### {name1} - {selected_col1}")
+                            data1 = df1_filtered[col1_data].dropna()
+                            if len(data1) > 0:
+                                if use_plotly:
+                                    fig = px.histogram(
+                                        x=data1,
+                                        nbins=20,
+                                        title=f'Distribution (n={len(data1)})',
+                                        color_discrete_sequence=['#667eea']
+                                    )
+                                    fig.add_vline(x=data1.mean(), line_dash="dash", line_color="red",
+                                                 annotation_text=f"Mean: {data1.mean():.1f}")
+                                    st.plotly_chart(fig, use_container_width=True)
+                                else:
+                                    fig, ax = plt.subplots(figsize=(8, 5))
+                                    ax.hist(data1, bins=20, color='#667eea', alpha=0.7, edgecolor='black')
+                                    ax.axvline(data1.mean(), color='red', linestyle='--', 
+                                             label=f'Mean: {data1.mean():.1f}')
+                                    ax.set_xlabel(selected_col1)
+                                    ax.set_ylabel('Frequency')
+                                    ax.set_title(f'Distribution (n={len(data1)})')
+                                    ax.legend()
+                                    ax.grid(True, alpha=0.3)
+                                    st.pyplot(fig)
                         
-                        # Rename columns for display
-                        comparison_df.columns = [
-                            'Student ID',
-                            f'{selected_col1} ({name1})',
-                            f'{selected_col2} ({name2})',
-                            'Difference',
-                            '% Change',
-                            'Performance'
-                        ]
-                        
-                        st.dataframe(
-                            comparison_df.style.background_gradient(subset=['Difference', '% Change']),
-                            use_container_width=True,
-                            height=400
-                        )
-                        
-                        # Summary statistics
-                        st.markdown("### 📊 Summary Statistics")
-                        
-                        stat_cols = st.columns(3)
-                        improved = (comparison_df['Difference'] > 5).sum()
-                        declined = (comparison_df['Difference'] < -5).sum()
-                        stable = ((comparison_df['Difference'] >= -5) & (comparison_df['Difference'] <= 5)).sum()
-                        
-                        stat_cols[0].metric("📈 Improved", improved, f"{improved/len(comparison_df)*100:.1f}%")
-                        stat_cols[1].metric("📉 Declined", declined, f"{declined/len(comparison_df)*100:.1f}%")
-                        stat_cols[2].metric("➡️ Stable", stable, f"{stable/len(comparison_df)*100:.1f}%")
+                        with col2:
+                            st.markdown(f"#### {name2} - {selected_col2}")
+                            data2 = df2_filtered[col2_data].dropna()
+                            if len(data2) > 0:
+                                if use_plotly:
+                                    fig = px.histogram(
+                                        x=data2,
+                                        nbins=20,
+                                        title=f'Distribution (n={len(data2)})',
+                                        color_discrete_sequence=['#764ba2']
+                                    )
+                                    fig.add_vline(x=data2.mean(), line_dash="dash", line_color="red",
+                                                 annotation_text=f"Mean: {data2.mean():.1f}")
+                                    st.plotly_chart(fig, use_container_width=True)
+                                else:
+                                    fig, ax = plt.subplots(figsize=(8, 5))
+                                    ax.hist(data2, bins=20, color='#764ba2', alpha=0.7, edgecolor='black')
+                                    ax.axvline(data2.mean(), color='red', linestyle='--', 
+                                             label=f'Mean: {data2.mean():.1f}')
+                                    ax.set_xlabel(selected_col2)
+                                    ax.set_ylabel('Frequency')
+                                    ax.set_title(f'Distribution (n={len(data2)})')
+                                    ax.legend()
+                                    ax.grid(True, alpha=0.3)
+                                    st.pyplot(fig)
     
     with tab3:
         st.markdown("## 📈 Detailed Analysis")
