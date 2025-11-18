@@ -104,6 +104,37 @@ with st.sidebar:
         help="Choose visualization color theme"
     )
     
+    # Define color palettes
+    color_themes = {
+        "Default": {
+            "primary": "#667eea",
+            "secondary": "#764ba2", 
+            "grades": ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'],
+            "histogram": "#667eea"
+        },
+        "Dark": {
+            "primary": "#2c3e50",
+            "secondary": "#34495e",
+            "grades": ['#27ae60', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'],
+            "histogram": "#34495e"
+        },
+        "Colorful": {
+            "primary": "#e91e63",
+            "secondary": "#9c27b0",
+            "grades": ['#00bcd4', '#3f51b5', '#673ab7', '#ff5722', '#f44336'],
+            "histogram": "#9c27b0"
+        },
+        "Professional": {
+            "primary": "#1e88e5",
+            "secondary": "#0d47a1",
+            "grades": ['#1976d2', '#42a5f5', '#90caf9', '#ffb74d', '#ff7043'],
+            "histogram": "#1565c0"
+        }
+    }
+    
+    # Get selected theme colors
+    theme_colors = color_themes[color_theme]
+    
     # Chart type preference
     chart_type = st.selectbox(
         "📈 Chart Style",
@@ -134,6 +165,57 @@ with st.sidebar:
     • Grade distribution analysis
     • Export capabilities
     """)
+
+# Color theme definitions
+COLOR_THEMES = {
+    "Default": {
+        "primary": "#667eea",
+        "secondary": "#764ba2",
+        "success": "#4CAF50",
+        "warning": "#FFC107",
+        "danger": "#F44336",
+        "info": "#2196F3",
+        "grades": ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'],  # HD to FL
+        "histogram": "#667eea",
+        "chart_colors": ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#00f2fe"]
+    },
+    "Dark": {
+        "primary": "#1a1a2e",
+        "secondary": "#16213e",
+        "success": "#0f3460",
+        "warning": "#533483",
+        "danger": "#e94560",
+        "info": "#2c3e50",
+        "grades": ['#2ecc71', '#27ae60', '#f39c12', '#e67e22', '#e74c3c'],
+        "histogram": "#1a1a2e",
+        "chart_colors": ["#1a1a2e", "#16213e", "#0f3460", "#533483", "#e94560"]
+    },
+    "Colorful": {
+        "primary": "#ff6b6b",
+        "secondary": "#4ecdc4",
+        "success": "#95e77e",
+        "warning": "#ffe66d",
+        "danger": "#ff6b6b",
+        "info": "#a8e6cf",
+        "grades": ['#95e77e', '#a8e6cf', '#ffe66d', '#ffd3b6', '#ff6b6b'],
+        "histogram": "#ff6b6b",
+        "chart_colors": ["#ff6b6b", "#4ecdc4", "#95e77e", "#ffe66d", "#a8e6cf"]
+    },
+    "Professional": {
+        "primary": "#2c3e50",
+        "secondary": "#34495e",
+        "success": "#27ae60",
+        "warning": "#f39c12",
+        "danger": "#c0392b",
+        "info": "#3498db",
+        "grades": ['#27ae60', '#2ecc71', '#f39c12', '#e67e22', '#c0392b'],
+        "histogram": "#2c3e50",
+        "chart_colors": ["#2c3e50", "#34495e", "#7f8c8d", "#95a5a6", "#bdc3c7"]
+    }
+}
+
+# Get selected theme colors
+theme_colors = COLOR_THEMES[color_theme]
 
 # Helper functions
 def process_dataframe(df):
@@ -204,11 +286,12 @@ def create_download_link(df, filename, file_format='csv'):
         b64 = base64.b64encode(excel_data).decode()
         return f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}.xlsx">📥 Download {filename}.xlsx</a>'
 
-def create_grade_pie_chart(distribution, title, use_plotly=True):
+def create_grade_pie_chart(distribution, title, use_plotly=True, colors=None):
     """Create a pie chart for grade distribution"""
     grades = []
     percentages = []
-    colors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336']  # HD to FL colors
+    if colors is None:
+        colors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336']  # Default HD to FL colors
     
     for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
         if grade in distribution:
@@ -355,8 +438,6 @@ else:
                 specs=[[{'type': 'pie'}] * len(dataframes)]
             )
             
-            colors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336']
-            
             for idx, (df, name) in enumerate(zip(dataframes, file_names)):
                 if 'Grade' in df.columns:
                     dist = get_grade_distribution(df)
@@ -373,7 +454,7 @@ else:
                             labels=grades,
                             values=percentages,
                             hole=0.3,
-                            marker_colors=colors[:len(grades)],
+                            marker_colors=theme_colors['grades'][:len(grades)],
                             textposition='inside',
                             textinfo='percent+label'
                         ),
@@ -388,7 +469,7 @@ else:
                 with cols[idx]:
                     if 'Grade' in df.columns:
                         dist = get_grade_distribution(df)
-                        fig = create_grade_pie_chart(dist, name, use_plotly=False)
+                        fig = create_grade_pie_chart(dist, name, use_plotly=False, colors=theme_colors['grades'])
                         st.pyplot(fig)
     
     with tab2:
@@ -550,7 +631,7 @@ else:
                                     title=f'{selected_col1} vs {selected_col2}',
                                     labels={'Metric1': f'{selected_col1} ({name1})', 
                                            'Metric2': f'{selected_col2} ({name2})'},
-                                    color_discrete_sequence=['#667eea']
+                                    color_discrete_sequence=[theme_colors['primary']]
                                 )
                                 
                                 # Add diagonal line
@@ -571,7 +652,7 @@ else:
                             else:
                                 fig, ax = plt.subplots(figsize=(10, 6))
                                 ax.scatter(plot_df['Metric1'], plot_df['Metric2'], 
-                                          c='#667eea', alpha=0.6, s=50)
+                                          c=theme_colors['primary'], alpha=0.6, s=50)
                                 
                                 min_val = min(plot_df['Metric1'].min(), plot_df['Metric2'].min())
                                 max_val = max(plot_df['Metric1'].max(), plot_df['Metric2'].max())
@@ -634,17 +715,19 @@ else:
                         else:
                             st.warning("No data available for scatter plot with the selected columns")
                     
-                    # Distribution plots for both ALL and COMMON students
+                    # Distribution plots for ALL students with detailed analysis
                     elif not show_common_only:
-                        st.markdown("### 📊 Distribution Comparison")
-                        st.info("Scatter plots are only available for common students. Showing distribution analysis instead.")
+                        st.markdown("### 📊 Comprehensive Analysis - ALL Students")
                         
                         use_plotly = (chart_type == "Interactive (Plotly)")
+                        
+                        # 1. HISTOGRAMS SIDE BY SIDE
+                        st.markdown("#### 📈 Distribution Comparison")
                         
                         col1, col2 = st.columns(2)
                         
                         with col1:
-                            st.markdown(f"#### {name1} - {selected_col1}")
+                            st.markdown(f"**{name1} - {selected_col1}**")
                             data1 = df1_filtered[col1_data].dropna()
                             if len(data1) > 0:
                                 if use_plotly:
@@ -652,14 +735,15 @@ else:
                                         x=data1,
                                         nbins=20,
                                         title=f'Distribution (n={len(data1)})',
-                                        color_discrete_sequence=['#667eea']
+                                        color_discrete_sequence=[theme_colors['histogram']]
                                     )
                                     fig.add_vline(x=data1.mean(), line_dash="dash", line_color="red",
                                                  annotation_text=f"Mean: {data1.mean():.1f}")
+                                    fig.update_layout(height=350)
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
                                     fig, ax = plt.subplots(figsize=(8, 5))
-                                    ax.hist(data1, bins=20, color='#667eea', alpha=0.7, edgecolor='black')
+                                    ax.hist(data1, bins=20, color=theme_colors['histogram'], alpha=0.7, edgecolor='black')
                                     ax.axvline(data1.mean(), color='red', linestyle='--', 
                                              label=f'Mean: {data1.mean():.1f}')
                                     ax.set_xlabel(selected_col1)
@@ -670,7 +754,7 @@ else:
                                     st.pyplot(fig)
                         
                         with col2:
-                            st.markdown(f"#### {name2} - {selected_col2}")
+                            st.markdown(f"**{name2} - {selected_col2}**")
                             data2 = df2_filtered[col2_data].dropna()
                             if len(data2) > 0:
                                 if use_plotly:
@@ -678,14 +762,15 @@ else:
                                         x=data2,
                                         nbins=20,
                                         title=f'Distribution (n={len(data2)})',
-                                        color_discrete_sequence=['#764ba2']
+                                        color_discrete_sequence=[theme_colors['secondary']]
                                     )
                                     fig.add_vline(x=data2.mean(), line_dash="dash", line_color="red",
                                                  annotation_text=f"Mean: {data2.mean():.1f}")
+                                    fig.update_layout(height=350)
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
                                     fig, ax = plt.subplots(figsize=(8, 5))
-                                    ax.hist(data2, bins=20, color='#764ba2', alpha=0.7, edgecolor='black')
+                                    ax.hist(data2, bins=20, color=theme_colors['secondary'], alpha=0.7, edgecolor='black')
                                     ax.axvline(data2.mean(), color='red', linestyle='--', 
                                              label=f'Mean: {data2.mean():.1f}')
                                     ax.set_xlabel(selected_col2)
@@ -694,6 +779,399 @@ else:
                                     ax.legend()
                                     ax.grid(True, alpha=0.3)
                                     st.pyplot(fig)
+                        
+                        st.markdown("---")
+                        
+                        # 2. SUMMARY STATISTICS TABLES
+                        st.markdown("#### 📊 Statistical Summary & Grade Distribution")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown(f"**{name1}**")
+                            
+                            # Statistics for Final Mark
+                            if 'Final_Mark' in df1_filtered.columns:
+                                stats1 = df1_filtered['Final_Mark'].describe()
+                                
+                                # Create a nice summary table
+                                summary_data1 = {
+                                    'Metric': ['Students', 'Mean', 'Median', 'Std Dev', 'Min', 'Max'],
+                                    'Value': [
+                                        f"{stats1['count']:.0f}",
+                                        f"{stats1['mean']:.2f}",
+                                        f"{stats1['50%']:.2f}",
+                                        f"{stats1['std']:.2f}",
+                                        f"{stats1['min']:.2f}",
+                                        f"{stats1['max']:.2f}"
+                                    ]
+                                }
+                                
+                                summary_df1 = pd.DataFrame(summary_data1)
+                                st.dataframe(summary_df1, use_container_width=True, hide_index=True)
+                                
+                                # Grade distribution
+                                if 'Grade' in df1_filtered.columns:
+                                    st.markdown("**Grade Distribution:**")
+                                    dist1 = get_grade_distribution(df1_filtered)
+                                    
+                                    # Calculate key metrics
+                                    hd_pct = dist1.get('HD', {}).get('percentage', 0)
+                                    dn_pct = dist1.get('DN', {}).get('percentage', 0)
+                                    pass_rate = 100 - dist1.get('FL', {}).get('percentage', 0)
+                                    
+                                    metric_cols = st.columns(3)
+                                    metric_cols[0].metric("HD %", f"{hd_pct:.1f}%")
+                                    metric_cols[1].metric("HD+DN %", f"{hd_pct + dn_pct:.1f}%")
+                                    metric_cols[2].metric("Pass Rate", f"{pass_rate:.1f}%")
+                                    
+                                    # Grade breakdown table
+                                    grade_data1 = []
+                                    for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
+                                        if grade in dist1:
+                                            grade_data1.append({
+                                                'Grade': grade,
+                                                'Count': dist1[grade]['count'],
+                                                'Percentage': f"{dist1[grade]['percentage']:.1f}%"
+                                            })
+                                    
+                                    if grade_data1:
+                                        grade_df1 = pd.DataFrame(grade_data1)
+                                        st.dataframe(grade_df1, use_container_width=True, hide_index=True)
+                        
+                        with col2:
+                            st.markdown(f"**{name2}**")
+                            
+                            # Statistics for Final Mark
+                            if 'Final_Mark' in df2_filtered.columns:
+                                stats2 = df2_filtered['Final_Mark'].describe()
+                                
+                                # Create a nice summary table
+                                summary_data2 = {
+                                    'Metric': ['Students', 'Mean', 'Median', 'Std Dev', 'Min', 'Max'],
+                                    'Value': [
+                                        f"{stats2['count']:.0f}",
+                                        f"{stats2['mean']:.2f}",
+                                        f"{stats2['50%']:.2f}",
+                                        f"{stats2['std']:.2f}",
+                                        f"{stats2['min']:.2f}",
+                                        f"{stats2['max']:.2f}"
+                                    ]
+                                }
+                                
+                                summary_df2 = pd.DataFrame(summary_data2)
+                                st.dataframe(summary_df2, use_container_width=True, hide_index=True)
+                                
+                                # Grade distribution
+                                if 'Grade' in df2_filtered.columns:
+                                    st.markdown("**Grade Distribution:**")
+                                    dist2 = get_grade_distribution(df2_filtered)
+                                    
+                                    # Calculate key metrics
+                                    hd_pct = dist2.get('HD', {}).get('percentage', 0)
+                                    dn_pct = dist2.get('DN', {}).get('percentage', 0)
+                                    pass_rate = 100 - dist2.get('FL', {}).get('percentage', 0)
+                                    
+                                    metric_cols = st.columns(3)
+                                    metric_cols[0].metric("HD %", f"{hd_pct:.1f}%")
+                                    metric_cols[1].metric("HD+DN %", f"{hd_pct + dn_pct:.1f}%")
+                                    metric_cols[2].metric("Pass Rate", f"{pass_rate:.1f}%")
+                                    
+                                    # Grade breakdown table
+                                    grade_data2 = []
+                                    for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
+                                        if grade in dist2:
+                                            grade_data2.append({
+                                                'Grade': grade,
+                                                'Count': dist2[grade]['count'],
+                                                'Percentage': f"{dist2[grade]['percentage']:.1f}%"
+                                            })
+                                    
+                                    if grade_data2:
+                                        grade_df2 = pd.DataFrame(grade_data2)
+                                        st.dataframe(grade_df2, use_container_width=True, hide_index=True)
+                        
+                        st.markdown("---")
+                        
+                        # 3. CORRELATION MATRICES (Half/Triangular)
+                        st.markdown("#### 🔗 Assessment Correlation Analysis")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown(f"**{name1} - Correlation Matrix**")
+                            
+                            # Get assessment columns for correlation
+                            assessment_cols1 = get_assessment_columns(df1_filtered)
+                            if len(assessment_cols1) > 1:
+                                # Prepare numeric columns
+                                numeric_cols1 = []
+                                for col in assessment_cols1[:6]:  # Limit to 6 columns for readability
+                                    if col == df1_filtered.columns[3]:  # Column D
+                                        if 'Final_Mark' in df1_filtered.columns:
+                                            numeric_cols1.append('Final_Mark')
+                                    else:
+                                        df1_filtered[col] = pd.to_numeric(df1_filtered[col], errors='coerce')
+                                        if df1_filtered[col].notna().sum() > 10:
+                                            numeric_cols1.append(col)
+                                
+                                if len(numeric_cols1) > 1:
+                                    corr_matrix1 = df1_filtered[numeric_cols1].corr()
+                                    
+                                    # Create mask for upper triangle
+                                    mask = np.triu(np.ones_like(corr_matrix1, dtype=bool))
+                                    
+                                    if use_plotly:
+                                        # Create triangular heatmap with plotly
+                                        corr_masked = corr_matrix1.where(~mask)
+                                        fig = px.imshow(
+                                            corr_masked,
+                                            color_continuous_scale='RdBu',
+                                            zmin=-1, zmax=1,
+                                            aspect='auto',
+                                            text_auto='.2f'
+                                        )
+                                        fig.update_layout(height=400, title="Lower Triangle Only")
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    else:
+                                        fig, ax = plt.subplots(figsize=(8, 6))
+                                        sns.heatmap(corr_matrix1, mask=mask, annot=True, fmt='.2f',
+                                                  cmap='coolwarm', center=0, vmin=-1, vmax=1,
+                                                  square=True, ax=ax, cbar_kws={"shrink": 0.8})
+                                        ax.set_title('Assessment Correlations (Lower Triangle)')
+                                        st.pyplot(fig)
+                                else:
+                                    st.info("Not enough numeric columns for correlation analysis")
+                            else:
+                                st.info("Not enough assessment columns for correlation analysis")
+                        
+                        with col2:
+                            st.markdown(f"**{name2} - Correlation Matrix**")
+                            
+                            # Get assessment columns for correlation
+                            assessment_cols2 = get_assessment_columns(df2_filtered)
+                            if len(assessment_cols2) > 1:
+                                # Prepare numeric columns
+                                numeric_cols2 = []
+                                for col in assessment_cols2[:6]:  # Limit to 6 columns for readability
+                                    if col == df2_filtered.columns[3]:  # Column D
+                                        if 'Final_Mark' in df2_filtered.columns:
+                                            numeric_cols2.append('Final_Mark')
+                                    else:
+                                        df2_filtered[col] = pd.to_numeric(df2_filtered[col], errors='coerce')
+                                        if df2_filtered[col].notna().sum() > 10:
+                                            numeric_cols2.append(col)
+                                
+                                if len(numeric_cols2) > 1:
+                                    corr_matrix2 = df2_filtered[numeric_cols2].corr()
+                                    
+                                    # Create mask for upper triangle
+                                    mask = np.triu(np.ones_like(corr_matrix2, dtype=bool))
+                                    
+                                    if use_plotly:
+                                        # Create triangular heatmap with plotly
+                                        corr_masked = corr_matrix2.where(~mask)
+                                        fig = px.imshow(
+                                            corr_masked,
+                                            color_continuous_scale='RdBu',
+                                            zmin=-1, zmax=1,
+                                            aspect='auto',
+                                            text_auto='.2f'
+                                        )
+                                        fig.update_layout(height=400, title="Lower Triangle Only")
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    else:
+                                        fig, ax = plt.subplots(figsize=(8, 6))
+                                        sns.heatmap(corr_matrix2, mask=mask, annot=True, fmt='.2f',
+                                                  cmap='coolwarm', center=0, vmin=-1, vmax=1,
+                                                  square=True, ax=ax, cbar_kws={"shrink": 0.8})
+                                        ax.set_title('Assessment Correlations (Lower Triangle)')
+                                        st.pyplot(fig)
+                                else:
+                                    st.info("Not enough numeric columns for correlation analysis")
+                            else:
+                                st.info("Not enough assessment columns for correlation analysis")
+    
+                                ],
+                                'Difference': [
+                                    f"{stats2['count'] - stats1['count']:.0f}",
+                                    f"{stats2['mean'] - stats1['mean']:+.2f}",
+                                    f"{stats2['std'] - stats1['std']:+.2f}",
+                                    f"{stats2['min'] - stats1['min']:+.1f}",
+                                    f"{stats2['25%'] - stats1['25%']:+.1f}",
+                                    f"{stats2['50%'] - stats1['50%']:+.1f}",
+                                    f"{stats2['75%'] - stats1['75%']:+.1f}",
+                                    f"{stats2['max'] - stats1['max']:+.1f}"
+                                ]
+                            }, index=['Count', 'Mean', 'Std Dev', 'Min', '25%', 'Median', '75%', 'Max'])
+                            
+                            st.dataframe(comparison_stats, use_container_width=True)
+                            
+                            # Visual comparison metrics
+                            st.markdown("### 📈 Key Performance Indicators")
+                            
+                            metric_cols = st.columns(4)
+                            
+                            # Mean difference
+                            mean_diff = stats2['mean'] - stats1['mean']
+                            metric_cols[0].metric(
+                                "Mean Difference",
+                                f"{mean_diff:+.2f}",
+                                delta=f"{(mean_diff/stats1['mean']*100):+.1f}%" if stats1['mean'] != 0 else "N/A",
+                                delta_color="normal"
+                            )
+                            
+                            # Median difference
+                            median_diff = stats2['50%'] - stats1['50%']
+                            metric_cols[1].metric(
+                                "Median Difference",
+                                f"{median_diff:+.2f}",
+                                delta=f"{(median_diff/stats1['50%']*100):+.1f}%" if stats1['50%'] != 0 else "N/A",
+                                delta_color="normal"
+                            )
+                            
+                            # Std Dev comparison
+                            std_diff = stats2['std'] - stats1['std']
+                            metric_cols[2].metric(
+                                "Std Dev Difference",
+                                f"{std_diff:+.2f}",
+                                delta=f"{(std_diff/stats1['std']*100):+.1f}%" if stats1['std'] != 0 else "N/A",
+                                delta_color="inverse"  # Lower std dev is better
+                            )
+                            
+                            # Count difference
+                            count_diff = stats2['count'] - stats1['count']
+                            metric_cols[3].metric(
+                                "Student Count Diff",
+                                f"{count_diff:+.0f}",
+                                delta=f"{(count_diff/stats1['count']*100):+.1f}%" if stats1['count'] != 0 else "N/A",
+                                delta_color="normal"
+                            )
+                        
+                        # Grade Distribution Comparison (for Final Mark)
+                        st.markdown("---")
+                        st.markdown("### 🎯 Grade Distribution Comparison")
+                        
+                        if 'Grade' in df1 and 'Grade' in df2:
+                            grade_col1, grade_col2 = st.columns(2)
+                            
+                            # Get distributions
+                            dist1 = get_grade_distribution(df1)
+                            dist2 = get_grade_distribution(df2)
+                            
+                            # Create comparison table
+                            grade_comparison = pd.DataFrame()
+                            
+                            for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
+                                count1 = dist1.get(grade, {}).get('count', 0)
+                                pct1 = dist1.get(grade, {}).get('percentage', 0)
+                                count2 = dist2.get(grade, {}).get('count', 0)
+                                pct2 = dist2.get(grade, {}).get('percentage', 0)
+                                
+                                grade_comparison = pd.concat([grade_comparison, pd.DataFrame({
+                                    'Grade': [grade],
+                                    f'{name1} Count': [count1],
+                                    f'{name1} %': [f"{pct1:.1f}%"],
+                                    f'{name2} Count': [count2],
+                                    f'{name2} %': [f"{pct2:.1f}%"],
+                                    'Diff %': [f"{pct2 - pct1:+.1f}%"]
+                                })], ignore_index=True)
+                            
+                            with grade_col1:
+                                st.dataframe(grade_comparison, use_container_width=True, hide_index=True)
+                            
+                            with grade_col2:
+                                # Calculate aggregate metrics
+                                hd_dn_pct1 = dist1.get('HD', {}).get('percentage', 0) + dist1.get('DN', {}).get('percentage', 0)
+                                hd_dn_pct2 = dist2.get('HD', {}).get('percentage', 0) + dist2.get('DN', {}).get('percentage', 0)
+                                
+                                pass_pct1 = 100 - dist1.get('FL', {}).get('percentage', 0)
+                                pass_pct2 = 100 - dist2.get('FL', {}).get('percentage', 0)
+                                
+                                st.markdown("#### 📊 Grade Summary Metrics")
+                                
+                                summary_metrics = pd.DataFrame({
+                                    'Metric': ['HD+DN %', 'Pass Rate %', 'Fail Rate %', 'HD Only %'],
+                                    name1: [
+                                        f"{hd_dn_pct1:.1f}%",
+                                        f"{pass_pct1:.1f}%",
+                                        f"{dist1.get('FL', {}).get('percentage', 0):.1f}%",
+                                        f"{dist1.get('HD', {}).get('percentage', 0):.1f}%"
+                                    ],
+                                    name2: [
+                                        f"{hd_dn_pct2:.1f}%",
+                                        f"{pass_pct2:.1f}%",
+                                        f"{dist2.get('FL', {}).get('percentage', 0):.1f}%",
+                                        f"{dist2.get('HD', {}).get('percentage', 0):.1f}%"
+                                    ],
+                                    'Difference': [
+                                        f"{hd_dn_pct2 - hd_dn_pct1:+.1f}%",
+                                        f"{pass_pct2 - pass_pct1:+.1f}%",
+                                        f"{dist2.get('FL', {}).get('percentage', 0) - dist1.get('FL', {}).get('percentage', 0):+.1f}%",
+                                        f"{dist2.get('HD', {}).get('percentage', 0) - dist1.get('HD', {}).get('percentage', 0):+.1f}%"
+                                    ]
+                                })
+                                
+                                st.dataframe(summary_metrics, use_container_width=True, hide_index=True)
+                            
+                            # Visualization of grade distributions side by side
+                            st.markdown("#### 📊 Visual Grade Comparison")
+                            
+                            if use_plotly:
+                                # Create grouped bar chart
+                                grades_list = ['HD', 'DN', 'CR', 'PS', 'FL']
+                                pct1_list = [dist1.get(g, {}).get('percentage', 0) for g in grades_list]
+                                pct2_list = [dist2.get(g, {}).get('percentage', 0) for g in grades_list]
+                                
+                                fig = go.Figure(data=[
+                                    go.Bar(name=name1, x=grades_list, y=pct1_list, 
+                                          marker_color=theme_colors['primary']),
+                                    go.Bar(name=name2, x=grades_list, y=pct2_list,
+                                          marker_color=theme_colors['secondary'])
+                                ])
+                                fig.update_layout(
+                                    barmode='group',
+                                    title='Grade Distribution Comparison',
+                                    xaxis_title='Grade',
+                                    yaxis_title='Percentage (%)',
+                                    showlegend=True
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                # Create matplotlib grouped bar chart
+                                fig, ax = plt.subplots(figsize=(10, 6))
+                                grades_list = ['HD', 'DN', 'CR', 'PS', 'FL']
+                                x = np.arange(len(grades_list))
+                                width = 0.35
+                                
+                                pct1_list = [dist1.get(g, {}).get('percentage', 0) for g in grades_list]
+                                pct2_list = [dist2.get(g, {}).get('percentage', 0) for g in grades_list]
+                                
+                                bars1 = ax.bar(x - width/2, pct1_list, width, label=name1, 
+                                              color=theme_colors['primary'], alpha=0.8)
+                                bars2 = ax.bar(x + width/2, pct2_list, width, label=name2,
+                                              color=theme_colors['secondary'], alpha=0.8)
+                                
+                                ax.set_xlabel('Grade')
+                                ax.set_ylabel('Percentage (%)')
+                                ax.set_title('Grade Distribution Comparison')
+                                ax.set_xticks(x)
+                                ax.set_xticklabels(grades_list)
+                                ax.legend()
+                                ax.grid(True, alpha=0.3, axis='y')
+                                
+                                # Add value labels on bars
+                                for bars in [bars1, bars2]:
+                                    for bar in bars:
+                                        height = bar.get_height()
+                                        ax.annotate(f'{height:.1f}%',
+                                                  xy=(bar.get_x() + bar.get_width() / 2, height),
+                                                  xytext=(0, 3),  # 3 points vertical offset
+                                                  textcoords="offset points",
+                                                  ha='center', va='bottom',
+                                                  fontsize=9)
+                                
+                                st.pyplot(fig)
     
     with tab3:
         st.markdown("## 📈 Detailed Analysis")
@@ -743,7 +1221,7 @@ else:
                         nbins=20,
                         title='Final Mark Distribution',
                         labels={'Final_Mark': 'Final Mark', 'count': 'Number of Students'},
-                        color_discrete_sequence=['#667eea']
+                        color_discrete_sequence=[theme_colors['primary']]
                     )
                     fig.add_vline(
                         x=df_detail['Final_Mark'].mean(),
@@ -755,7 +1233,7 @@ else:
                 else:
                     fig, ax = plt.subplots(figsize=(10, 6))
                     ax.hist(df_detail['Final_Mark'].dropna(), bins=20, 
-                           color='#667eea', alpha=0.7, edgecolor='black')
+                           color=theme_colors['primary'], alpha=0.7, edgecolor='black')
                     ax.axvline(df_detail['Final_Mark'].mean(), color='red', 
                              linestyle='--', linewidth=2, 
                              label=f'Mean: {df_detail["Final_Mark"].mean():.1f}')
@@ -876,9 +1354,10 @@ else:
                                 labels.append(col[:20])  # Truncate long names
                         
                         if scores:
+                            use_plotly = (chart_type == "Interactive (Plotly)")
                             if use_plotly:
                                 fig = go.Figure(data=[
-                                    go.Bar(x=labels, y=scores, marker_color='#667eea')
+                                    go.Bar(x=labels, y=scores, marker_color=theme_colors['primary'])
                                 ])
                                 fig.update_layout(
                                     title="Assessment Scores",
@@ -889,7 +1368,7 @@ else:
                                 st.plotly_chart(fig, use_container_width=True)
                             else:
                                 fig, ax = plt.subplots(figsize=(10, 6))
-                                ax.bar(labels, scores, color='#667eea')
+                                ax.bar(labels, scores, color=theme_colors['primary'])
                                 ax.set_xlabel('Assessment')
                                 ax.set_ylabel('Score')
                                 ax.set_title('Assessment Scores')
