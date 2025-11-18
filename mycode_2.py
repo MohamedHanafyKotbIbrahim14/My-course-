@@ -94,47 +94,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Settings section
-    st.markdown("## ⚙️ Settings")
-    
-    # Color theme selector
-    color_theme = st.selectbox(
-        "🎨 Color Theme",
-        ["Default", "Dark", "Colorful", "Professional"],
-        help="Choose visualization color theme"
-    )
-    
-    # Define color palettes
-    color_themes = {
-        "Default": {
-            "primary": "#667eea",
-            "secondary": "#764ba2", 
-            "grades": ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'],
-            "histogram": "#667eea"
-        },
-        "Dark": {
-            "primary": "#2c3e50",
-            "secondary": "#34495e",
-            "grades": ['#27ae60', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'],
-            "histogram": "#34495e"
-        },
-        "Colorful": {
-            "primary": "#e91e63",
-            "secondary": "#9c27b0",
-            "grades": ['#00bcd4', '#3f51b5', '#673ab7', '#ff5722', '#f44336'],
-            "histogram": "#9c27b0"
-        },
-        "Professional": {
-            "primary": "#1e88e5",
-            "secondary": "#0d47a1",
-            "grades": ['#1976d2', '#42a5f5', '#90caf9', '#ffb74d', '#ff7043'],
-            "histogram": "#1565c0"
-        }
-    }
-    
-    # Get selected theme colors
-    theme_colors = color_themes[color_theme]
-    
     # Chart type preference
     chart_type = st.selectbox(
         "📈 Chart Style",
@@ -166,56 +125,13 @@ with st.sidebar:
     • Export capabilities
     """)
 
-# Color theme definitions
-COLOR_THEMES = {
-    "Default": {
-        "primary": "#667eea",
-        "secondary": "#764ba2",
-        "success": "#4CAF50",
-        "warning": "#FFC107",
-        "danger": "#F44336",
-        "info": "#2196F3",
-        "grades": ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'],  # HD to FL
-        "histogram": "#667eea",
-        "chart_colors": ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#00f2fe"]
-    },
-    "Dark": {
-        "primary": "#1a1a2e",
-        "secondary": "#16213e",
-        "success": "#0f3460",
-        "warning": "#533483",
-        "danger": "#e94560",
-        "info": "#2c3e50",
-        "grades": ['#2ecc71', '#27ae60', '#f39c12', '#e67e22', '#e74c3c'],
-        "histogram": "#1a1a2e",
-        "chart_colors": ["#1a1a2e", "#16213e", "#0f3460", "#533483", "#e94560"]
-    },
-    "Colorful": {
-        "primary": "#ff6b6b",
-        "secondary": "#4ecdc4",
-        "success": "#95e77e",
-        "warning": "#ffe66d",
-        "danger": "#ff6b6b",
-        "info": "#a8e6cf",
-        "grades": ['#95e77e', '#a8e6cf', '#ffe66d', '#ffd3b6', '#ff6b6b'],
-        "histogram": "#ff6b6b",
-        "chart_colors": ["#ff6b6b", "#4ecdc4", "#95e77e", "#ffe66d", "#a8e6cf"]
-    },
-    "Professional": {
-        "primary": "#2c3e50",
-        "secondary": "#34495e",
-        "success": "#27ae60",
-        "warning": "#f39c12",
-        "danger": "#c0392b",
-        "info": "#3498db",
-        "grades": ['#27ae60', '#2ecc71', '#f39c12', '#e67e22', '#c0392b'],
-        "histogram": "#2c3e50",
-        "chart_colors": ["#2c3e50", "#34495e", "#7f8c8d", "#95a5a6", "#bdc3c7"]
-    }
+# Use default color theme
+theme_colors = {
+    "primary": "#667eea",
+    "secondary": "#764ba2", 
+    "grades": ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'],
+    "histogram": "#667eea"
 }
-
-# Get selected theme colors
-theme_colors = COLOR_THEMES[color_theme]
 
 # Helper functions
 def process_dataframe(df):
@@ -369,20 +285,6 @@ if not uploaded_files or len(uploaded_files) < 2:
         </div>
         """, unsafe_allow_html=True)
     
-    # Sample data format
-    st.markdown("---")
-    st.markdown("## 📋 Expected Data Format")
-    
-    sample_data = pd.DataFrame({
-        'Student ID': ['S001', 'S002', 'S003'],
-        'Name': ['John Doe', 'Jane Smith', 'Bob Johnson'],
-        'Assignment 1': [85, 92, 78],
-        'Final Mark/Grade': ['85 HD', '92 HD', '78 DN'],
-        'Assignment 2': [88, 90, 82]
-    })
-    
-    st.dataframe(sample_data, use_container_width=True)
-    st.caption("Your CSV should have Student ID in Column A and Final Mark/Grade in Column D")
     
 else:
     # Process uploaded files
@@ -396,10 +298,9 @@ else:
         file_names.append(file.name)
     
     # Create tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab4, tab5 = st.tabs([
         "📊 Overview", 
         "🔄 Comparison", 
-        "📈 Detailed Analysis",
         "🎯 Individual Performance",
         "📥 Export Results"
     ])
@@ -677,7 +578,6 @@ else:
                             
                             comparison_df = plot_df.copy()
                             comparison_df['Difference'] = comparison_df['Metric2'] - comparison_df['Metric1']
-                            comparison_df['% Change'] = (comparison_df['Difference'] / comparison_df['Metric1'] * 100).round(1)
                             comparison_df = comparison_df.sort_values('Difference', ascending=False)
                             
                             # Add performance indicators
@@ -691,12 +591,11 @@ else:
                                 f'{selected_col1} ({name1})',
                                 f'{selected_col2} ({name2})',
                                 'Difference',
-                                '% Change',
                                 'Performance'
                             ]
                             
                             st.dataframe(
-                                comparison_df.style.background_gradient(subset=['Difference', '% Change']),
+                                comparison_df.style.background_gradient(subset=['Difference']),
                                 use_container_width=True,
                                 height=400
                             )
@@ -815,16 +714,6 @@ else:
                                     st.markdown("**Grade Distribution:**")
                                     dist1 = get_grade_distribution(df1_filtered)
                                     
-                                    # Calculate key metrics
-                                    hd_pct = dist1.get('HD', {}).get('percentage', 0)
-                                    dn_pct = dist1.get('DN', {}).get('percentage', 0)
-                                    pass_rate = 100 - dist1.get('FL', {}).get('percentage', 0)
-                                    
-                                    metric_cols = st.columns(3)
-                                    metric_cols[0].metric("HD %", f"{hd_pct:.1f}%")
-                                    metric_cols[1].metric("HD+DN %", f"{hd_pct + dn_pct:.1f}%")
-                                    metric_cols[2].metric("Pass Rate", f"{pass_rate:.1f}%")
-                                    
                                     # Grade breakdown table
                                     grade_data1 = []
                                     for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
@@ -867,16 +756,6 @@ else:
                                     st.markdown("**Grade Distribution:**")
                                     dist2 = get_grade_distribution(df2_filtered)
                                     
-                                    # Calculate key metrics
-                                    hd_pct = dist2.get('HD', {}).get('percentage', 0)
-                                    dn_pct = dist2.get('DN', {}).get('percentage', 0)
-                                    pass_rate = 100 - dist2.get('FL', {}).get('percentage', 0)
-                                    
-                                    metric_cols = st.columns(3)
-                                    metric_cols[0].metric("HD %", f"{hd_pct:.1f}%")
-                                    metric_cols[1].metric("HD+DN %", f"{hd_pct + dn_pct:.1f}%")
-                                    metric_cols[2].metric("Pass Rate", f"{pass_rate:.1f}%")
-                                    
                                     # Grade breakdown table
                                     grade_data2 = []
                                     for grade in ['HD', 'DN', 'CR', 'PS', 'FL']:
@@ -906,7 +785,7 @@ else:
                             if len(assessment_cols1) > 1:
                                 # Prepare numeric columns
                                 numeric_cols1 = []
-                                for col in assessment_cols1[:6]:  # Limit to 6 columns for readability
+                                for col in assessment_cols1:  # Process all columns
                                     if col == df1_filtered.columns[3]:  # Column D
                                         if 'Final_Mark' in df1_filtered.columns:
                                             numeric_cols1.append('Final_Mark')
@@ -953,7 +832,7 @@ else:
                             if len(assessment_cols2) > 1:
                                 # Prepare numeric columns
                                 numeric_cols2 = []
-                                for col in assessment_cols2[:6]:  # Limit to 6 columns for readability
+                                for col in assessment_cols2:  # Process all columns
                                     if col == df2_filtered.columns[3]:  # Column D
                                         if 'Final_Mark' in df2_filtered.columns:
                                             numeric_cols2.append('Final_Mark')
@@ -991,117 +870,6 @@ else:
                                     st.info("Not enough numeric columns for correlation analysis")
                             else:
                                 st.info("Not enough assessment columns for correlation analysis")
-    
-    with tab3:
-        st.markdown("## 📈 Detailed Analysis")
-        
-        # Select file for detailed analysis
-        selected_file_idx = st.selectbox(
-            "Select File for Detailed Analysis",
-            range(len(file_names)),
-            format_func=lambda x: file_names[x],
-            key="detailed_file"
-        )
-        
-        df_detail = dataframes[selected_file_idx]
-        file_detail_name = file_names[selected_file_idx]
-        
-        st.markdown(f"### Analyzing: **{file_detail_name}**")
-        
-        # Statistical summary
-        st.markdown("### 📊 Statistical Summary")
-        
-        if 'Final_Mark' in df_detail.columns:
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                stats = df_detail['Final_Mark'].describe()
-                stats_df = pd.DataFrame({
-                    'Statistic': ['Count', 'Mean', 'Std Dev', 'Min', '25%', 'Median', '75%', 'Max'],
-                    'Value': [
-                        f"{stats['count']:.0f}",
-                        f"{stats['mean']:.2f}",
-                        f"{stats['std']:.2f}",
-                        f"{stats['min']:.2f}",
-                        f"{stats['25%']:.2f}",
-                        f"{stats['50%']:.2f}",
-                        f"{stats['75%']:.2f}",
-                        f"{stats['max']:.2f}"
-                    ]
-                })
-                st.dataframe(stats_df, use_container_width=True, hide_index=True)
-            
-            with col2:
-                # Distribution plot
-                if use_plotly:
-                    fig = px.histogram(
-                        df_detail,
-                        x='Final_Mark',
-                        nbins=20,
-                        title='Final Mark Distribution',
-                        labels={'Final_Mark': 'Final Mark', 'count': 'Number of Students'},
-                        color_discrete_sequence=[theme_colors['primary']]
-                    )
-                    fig.add_vline(
-                        x=df_detail['Final_Mark'].mean(),
-                        line_dash="dash",
-                        line_color="red",
-                        annotation_text=f"Mean: {df_detail['Final_Mark'].mean():.1f}"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.hist(df_detail['Final_Mark'].dropna(), bins=20, 
-                           color=theme_colors['primary'], alpha=0.7, edgecolor='black')
-                    ax.axvline(df_detail['Final_Mark'].mean(), color='red', 
-                             linestyle='--', linewidth=2, 
-                             label=f'Mean: {df_detail["Final_Mark"].mean():.1f}')
-                    ax.set_xlabel('Final Mark')
-                    ax.set_ylabel('Number of Students')
-                    ax.set_title('Final Mark Distribution')
-                    ax.legend()
-                    ax.grid(True, alpha=0.3)
-                    st.pyplot(fig)
-        
-        # Assessment columns analysis
-        assessment_cols = get_assessment_columns(df_detail)
-        if len(assessment_cols) > 1:
-            st.markdown("### 📊 Assessment Components Analysis")
-            
-            # Create correlation matrix
-            numeric_cols = []
-            for col in assessment_cols:
-                if col == df_detail.columns[3]:  # Column D
-                    numeric_cols.append('Final_Mark')
-                else:
-                    df_detail[col] = pd.to_numeric(df_detail[col], errors='coerce')
-                    numeric_cols.append(col)
-            
-            # Filter out columns with too many NaN values
-            valid_cols = []
-            for col in numeric_cols:
-                if df_detail[col].notna().sum() > 10:  # At least 10 valid values
-                    valid_cols.append(col)
-            
-            if len(valid_cols) > 1:
-                corr_matrix = df_detail[valid_cols].corr()
-                
-                # Correlation heatmap
-                if use_plotly:
-                    fig = px.imshow(
-                        corr_matrix,
-                        title="Assessment Correlation Matrix",
-                        color_continuous_scale='RdBu',
-                        aspect='auto',
-                        text_auto='.2f'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    fig, ax = plt.subplots(figsize=(10, 8))
-                    sns.heatmap(corr_matrix, annot=True, fmt='.2f', 
-                              cmap='coolwarm', center=0, ax=ax)
-                    ax.set_title('Assessment Correlation Matrix')
-                    st.pyplot(fig)
     
     with tab4:
         st.markdown("## 🎯 Individual Student Performance")
