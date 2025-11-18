@@ -992,7 +992,7 @@ else:
                             else:
                                 st.info("Not enough assessment columns for correlation analysis")
     
-                                ,
+                                ],
                                 'Difference': [
                                     f"{stats2['count'] - stats1['count']:.0f}",
                                     f"{stats2['mean'] - stats1['mean']:+.2f}",
