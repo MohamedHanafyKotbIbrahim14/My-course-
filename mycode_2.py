@@ -195,6 +195,57 @@ if 'font_size' in st.session_state:
         st.session_state.make_bold
     ), unsafe_allow_html=True)
 
+# Helper function to style matplotlib plots with font settings
+def style_matplotlib_plot(ax, title=None, xlabel=None, ylabel=None):
+    """Apply font settings to matplotlib plot"""
+    font_size = st.session_state.get('font_size', 16)
+    header_size = st.session_state.get('header_size', 24)
+    weight = 'bold' if st.session_state.get('make_bold', True) else 'normal'
+    
+    # Title
+    if title:
+        ax.set_title(title, fontsize=header_size, fontweight='bold')
+    
+    # Axis labels
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=font_size + 2, fontweight=weight)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=font_size + 2, fontweight=weight)
+    
+    # Tick labels
+    ax.tick_params(axis='both', which='major', labelsize=font_size)
+    for label in ax.get_xticklabels():
+        label.set_fontweight(weight)
+    for label in ax.get_yticklabels():
+        label.set_fontweight(weight)
+    
+    # Legend if present
+    legend = ax.get_legend()
+    if legend:
+        for text in legend.get_texts():
+            text.set_fontsize(font_size)
+            text.set_fontweight(weight)
+
+# Helper function to get plotly font settings
+def get_plotly_font_settings():
+    """Get font settings for plotly plots"""
+    font_size = st.session_state.get('font_size', 16)
+    header_size = st.session_state.get('header_size', 24)
+    weight = 'bold' if st.session_state.get('make_bold', True) else 'normal'
+    
+    return {
+        'title_font': {'size': header_size, 'family': 'Arial, sans-serif'},
+        'font': {'size': font_size, 'family': 'Arial, sans-serif'},
+        'xaxis': {
+            'title_font': {'size': font_size + 2},
+            'tickfont': {'size': font_size}
+        },
+        'yaxis': {
+            'title_font': {'size': font_size + 2},
+            'tickfont': {'size': font_size}
+        }
+    }
+
 # Header
 st.markdown('<h1 class="main-header">🎓 Course Analysis Tool Pro</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Advanced Analytics & Comparison Platform for Educational Data</p>', unsafe_allow_html=True)
@@ -399,12 +450,32 @@ def create_grade_pie_chart(distribution, title, use_plotly=True, colors=None):
             hole=0.3
         )
         fig.update_traces(textposition='inside', textinfo='percent+label')
+        # Apply font settings
+        font_settings = get_plotly_font_settings()
+        fig.update_layout(**font_settings)
         return fig
     else:
         plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
         fig, ax = plt.subplots(figsize=(8 * plot_mult, 6 * plot_mult))
-        ax.pie(percentages, labels=grades, colors=colors, autopct='%1.1f%%', startangle=90)
-        ax.set_title(title)
+        wedges, texts, autotexts = ax.pie(percentages, labels=grades, colors=colors, 
+                                          autopct='%1.1f%%', startangle=90)
+        
+        # Apply font settings to pie chart
+        font_size = st.session_state.get('font_size', 16)
+        weight = 'bold' if st.session_state.get('make_bold', True) else 'normal'
+        
+        # Style the labels
+        for text in texts:
+            text.set_fontsize(font_size)
+            text.set_fontweight(weight)
+        
+        # Style the percentages
+        for autotext in autotexts:
+            autotext.set_fontsize(font_size)
+            autotext.set_fontweight(weight)
+            autotext.set_color('white')
+        
+        ax.set_title(title, fontsize=st.session_state.get('header_size', 24), fontweight='bold')
         return fig
 
 # Main content
@@ -539,7 +610,13 @@ else:
                         row=1, col=idx+1
                     )
             
-            fig.update_layout(height=int(400 * st.session_state.get('plot_size_multiplier', 1.2)), showlegend=False)
+            # Apply font settings
+            font_settings = get_plotly_font_settings()
+            fig.update_layout(
+                height=int(400 * st.session_state.get('plot_size_multiplier', 1.2)), 
+                showlegend=False,
+                **font_settings
+            )
             st.plotly_chart(fig, use_container_width=True)
         else:
             cols = st.columns(len(dataframes))
@@ -746,8 +823,12 @@ else:
                                     )
                                 )
                                 
-                                # Apply dynamic height
-                                fig.update_layout(height=int(500 * st.session_state.plot_size_multiplier))
+                                # Apply dynamic height and font settings
+                                font_settings = get_plotly_font_settings()
+                                fig.update_layout(
+                                    height=int(500 * st.session_state.plot_size_multiplier),
+                                    **font_settings
+                                )
                                 
                                 st.plotly_chart(fig, use_container_width=True)
                             else:
@@ -761,9 +842,10 @@ else:
                                 ax.plot([min_val, max_val], [min_val, max_val], 
                                        'k--', alpha=0.3, label='Equal Performance')
                                 
-                                ax.set_xlabel(f'{selected_col1} ({name1})')
-                                ax.set_ylabel(f'{selected_col2} ({name2})')
-                                ax.set_title(f'{selected_col1} vs {selected_col2}')
+                                style_matplotlib_plot(ax,
+                                                    title=f'{selected_col1} vs {selected_col2}',
+                                                    xlabel=f'{selected_col1} ({name1})',
+                                                    ylabel=f'{selected_col2} ({name2})')
                                 ax.legend()
                                 ax.grid(True, alpha=0.3)
                                 
@@ -839,7 +921,12 @@ else:
                                     )
                                     fig.add_vline(x=data1.mean(), line_dash="dash", line_color="red",
                                                  annotation_text=f"Mean: {data1.mean():.1f}")
-                                    fig.update_layout(height=int(350 * st.session_state.plot_size_multiplier))
+                                    # Apply font settings
+                                    font_settings = get_plotly_font_settings()
+                                    fig.update_layout(
+                                        height=int(350 * st.session_state.plot_size_multiplier),
+                                        **font_settings
+                                    )
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
                                     plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
@@ -847,9 +934,10 @@ else:
                                     ax.hist(data1, bins=20, color=theme_colors['histogram'], alpha=0.7, edgecolor='black')
                                     ax.axvline(data1.mean(), color='red', linestyle='--', 
                                              label=f'Mean: {data1.mean():.1f}')
-                                    ax.set_xlabel(selected_col1)
-                                    ax.set_ylabel('Frequency')
-                                    ax.set_title(f'Distribution (n={len(data1)})')
+                                    style_matplotlib_plot(ax, 
+                                                        title=f'Distribution (n={len(data1)})',
+                                                        xlabel=selected_col1,
+                                                        ylabel='Frequency')
                                     ax.legend()
                                     ax.grid(True, alpha=0.3)
                                     st.pyplot(fig)
@@ -867,16 +955,23 @@ else:
                                     )
                                     fig.add_vline(x=data2.mean(), line_dash="dash", line_color="red",
                                                  annotation_text=f"Mean: {data2.mean():.1f}")
-                                    fig.update_layout(height=350)
+                                    # Apply font settings
+                                    font_settings = get_plotly_font_settings()
+                                    fig.update_layout(
+                                        height=int(350 * st.session_state.plot_size_multiplier),
+                                        **font_settings
+                                    )
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
-                                    fig, ax = plt.subplots(figsize=(8, 5))
+                                    plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+                                    fig, ax = plt.subplots(figsize=(8 * plot_mult, 5 * plot_mult))
                                     ax.hist(data2, bins=20, color=theme_colors['secondary'], alpha=0.7, edgecolor='black')
                                     ax.axvline(data2.mean(), color='red', linestyle='--', 
                                              label=f'Mean: {data2.mean():.1f}')
-                                    ax.set_xlabel(selected_col2)
-                                    ax.set_ylabel('Frequency')
-                                    ax.set_title(f'Distribution (n={len(data2)})')
+                                    style_matplotlib_plot(ax, 
+                                                        title=f'Distribution (n={len(data2)})',
+                                                        xlabel=selected_col2,
+                                                        ylabel='Frequency')
                                     ax.legend()
                                     ax.grid(True, alpha=0.3)
                                     st.pyplot(fig)
@@ -1012,14 +1107,29 @@ else:
                                             aspect='auto',
                                             text_auto='.2f'
                                         )
-                                        fig.update_layout(height=400, title="Lower Triangle Only")
+                                        # Apply font settings
+                                        font_settings = get_plotly_font_settings()
+                                        fig.update_layout(
+                                            height=int(400 * st.session_state.plot_size_multiplier), 
+                                            title="Lower Triangle Only",
+                                            **font_settings
+                                        )
                                         st.plotly_chart(fig, use_container_width=True)
                                     else:
-                                        fig, ax = plt.subplots(figsize=(8, 6))
+                                        plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+                                        fig, ax = plt.subplots(figsize=(8 * plot_mult, 6 * plot_mult))
                                         sns.heatmap(corr_matrix1, mask=mask, annot=True, fmt='.2f',
                                                   cmap='coolwarm', center=0, vmin=-1, vmax=1,
                                                   square=True, ax=ax, cbar_kws={"shrink": 0.8})
-                                        ax.set_title('Assessment Correlations (Lower Triangle)')
+                                        
+                                        # Apply font settings
+                                        style_matplotlib_plot(ax, title='Assessment Correlations (Lower Triangle)')
+                                        
+                                        # Also style colorbar
+                                        cbar = ax.collections[0].colorbar
+                                        if cbar:
+                                            cbar.ax.tick_params(labelsize=st.session_state.get('font_size', 16))
+                                        
                                         st.pyplot(fig)
                                 else:
                                     st.info("Not enough numeric columns for correlation analysis")
@@ -1059,14 +1169,29 @@ else:
                                             aspect='auto',
                                             text_auto='.2f'
                                         )
-                                        fig.update_layout(height=400, title="Lower Triangle Only")
+                                        # Apply font settings
+                                        font_settings = get_plotly_font_settings()
+                                        fig.update_layout(
+                                            height=int(400 * st.session_state.plot_size_multiplier), 
+                                            title="Lower Triangle Only",
+                                            **font_settings
+                                        )
                                         st.plotly_chart(fig, use_container_width=True)
                                     else:
-                                        fig, ax = plt.subplots(figsize=(8, 6))
+                                        plot_mult = st.session_state.get('plot_size_multiplier', 1.2)
+                                        fig, ax = plt.subplots(figsize=(8 * plot_mult, 6 * plot_mult))
                                         sns.heatmap(corr_matrix2, mask=mask, annot=True, fmt='.2f',
                                                   cmap='coolwarm', center=0, vmin=-1, vmax=1,
                                                   square=True, ax=ax, cbar_kws={"shrink": 0.8})
-                                        ax.set_title('Assessment Correlations (Lower Triangle)')
+                                        
+                                        # Apply font settings
+                                        style_matplotlib_plot(ax, title='Assessment Correlations (Lower Triangle)')
+                                        
+                                        # Also style colorbar
+                                        cbar = ax.collections[0].colorbar
+                                        if cbar:
+                                            cbar.ax.tick_params(labelsize=st.session_state.get('font_size', 16))
+                                        
                                         st.pyplot(fig)
                                 else:
                                     st.info("Not enough numeric columns for correlation analysis")
